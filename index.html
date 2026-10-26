@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14283d">
+  <title>全国鉄道運行情報</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f1f5f9;
+      color: #172b42;
+    }
+    header {
+      background: #14283d;
+      color: white;
+      padding: 28px 18px;
+    }
+    header h1 { margin: 0 0 8px; font-size: 25px; }
+    header p { margin: 0; color: #d4e3f1; }
+    main { max-width: 760px; margin: auto; padding: 18px; }
+    .notice {
+      background: #fff4d6;
+      color: #75520a;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stat, .panel, .route {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px #14283d0d;
+    }
+    .stat span { display: block; font-size: 12px; }
+    .stat strong { display: block; font-size: 27px; margin-top: 8px; }
+    h2 { font-size: 19px; margin-top: 0; }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-top: 8px;
+      background: white;
+    }
+    button { background: #1768ac; color: white; border: 0; font-weight: 600; }
+    .route-list { display: grid; gap: 12px; margin-top: 12px; }
+    .route h3 { margin: 0 0 8px; }
+    .status { font-weight: 700; color: #64748b; }
+    .muted { color: #64748b; font-size: 13px; }
+    footer { padding: 20px 0; font-size: 12px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚆 全国鉄道運行情報</h1>
+    <p>全国の鉄道の運行状況をチェック</p>
+  </header>
+  <main>
+    <div class="notice">開発中の試作版です。現在、実際の運行情報は取得していません。</div>
+    <section class="stats">
+      <div class="stat"><span>平常（サンプル）</span><strong id="normal">2</strong></div>
+      <div class="stat"><span>遅延（サンプル）</span><strong id="delay">1</strong></div>
+      <div class="stat"><span>見合わせ（サンプル）</span><strong id="suspended">1</strong></div>
+    </section>
+    <section class="panel">
+      <h2>運行情報を検索</h2>
+      <input id="search" type="search" placeholder="路線名・鉄道会社・地域">
+      <select id="filter">
+        <option value="all">すべての状態</option>
+        <option value="normal">平常</option>
+        <option value="delay">遅延</option>
+        <option value="suspended">運転見合わせ</option>
+        <option value="unknown">情報なし</option>
+      </select>
+      <button id="refresh">表示を更新</button>
+      <p id="updated" class="muted">サンプルデータを表示中</p>
+    </section>
+    <h2 style="margin-top:24px">路線一覧 <span id="count" class="muted"></span></h2>
+    <div id="routes" class="route-list"></div>
+    <footer>このサイトは試作版です。乗車前には各鉄道会社の公式情報をご確認ください。</footer>
+  </main>
+  <script>
+    const sampleRoutes = [
+      {name:"山手線", company:"JR東日本", area:"関東", status:"normal", detail:"サンプル表示：平常"},
+      {name:"中央線快速", company:"JR東日本", area:"関東", status:"delay", detail:"サンプル表示：遅延"},
+      {name:"東海道新幹線", company:"JR東海", area:"東海・関東・関西", status:"normal", detail:"サンプル表示：平常"},
+      {name:"大阪環状線", company:"JR西日本", area:"関西", status:"suspended", detail:"サンプル表示：運転見合わせ"}
+    ];
+    const labels = {normal:"平常（サンプル）",delay:"遅延（サンプル）",suspended:"運転見合わせ（サンプル）",unknown:"情報なし"};
+    function render() {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const f = document.getElementById("filter").value;
+      const list = sampleRoutes.filter(r =>
+        (f === "all" || r.status === f) &&
+        (r.name + r.company + r.area).toLowerCase().includes(q)
+      );
+      document.getElementById("routes").innerHTML = list.length
+        ? list.map(r => '<article class="route"><h3>'+r.name+'</h3><div>'+r.company+' ・ '+r.area+'</div><p class="status">'+labels[r.status]+'</p><div>'+r.detail+'</div></article>').join("")
+        : '<p>該当する路線がありません。</p>';
+      document.getElementById("count").textContent = list.length + "路線";
+      document.getElementById("normal").textContent = sampleRoutes.filter(r=>r.status==="normal").length;
+      document.getElementById("delay").textContent = sampleRoutes.filter(r=>r.status==="delay").length;
+      document.getElementById("suspended").textContent = sampleRoutes.filter(r=>r.status==="suspended").length;
+    }
+    document.getElementById("search").addEventListener("input",render);
+    document.getElementById("filter").addEventListener("change",render);
+    document.getElementById("refresh").addEventListener("click",()=>{
+      document.getElementById("updated").textContent="表示を更新しました（サンプルデータ）";
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>
