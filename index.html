@@ -136,6 +136,16 @@ async function loadRoutes() {
     if (!Array.isArray(data)) {
       throw new Error("データ形式が想定と異なります");
     }
+    sampleRoutes = data.map(line => ({
+      console.log("取得した路線データ数：", data.length);
+      name: String(line.line_name || line.name || "名称不明"),
+      company: String(
+        line.company_name ||
+        line.operator_name ||
+        line.company ||
+        line.operator ||
+        "会社情報なし"
+      ),
 
     sampleRoutes = data.map(line => ({
       name: String(line.line_name || line.name || "名称不明"),
@@ -152,7 +162,7 @@ async function loadRoutes() {
     })).filter(line => line.name !== "名称不明");
 
     document.getElementById("updated").textContent =
-      "路線データを取得しました。運行情報は未接続です。";
+  "取得したデータ：" + data.length + "件。運行情報は未接続です。";
   } catch (error) {
     document.getElementById("updated").textContent =
       "取得できませんでした。通信状況を確認して再試行してください。";
