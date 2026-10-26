@@ -108,101 +108,153 @@
     </footer>
   </main>
 
-  <script>
-    const sampleRoutes = [
-      {name:"山手線", company:"JR東日本", area:"関東", status:"normal", detail:"サンプル表示：平常"},
-      {name:"中央線快速", company:"JR東日本", area:"関東", status:"delay", detail:"サンプル表示：遅延"},
-      {name:"東海道新幹線", company:"JR東海", area:"東海・関東・関西", status:"normal", detail:"サンプル表示：平常"},
-      {name:"大阪環状線", company:"JR西日本", area:"関西", status:"suspended", detail:"サンプル表示：運転見合わせ"}
-    ];
+  
+let sampleRoutes = [];
+let loadingRoutes = true;
 
-    const labels = {
-      normal:"平常（サンプル）",
-      delay:"遅延（サンプル）",
-      suspended:"運転見合わせ（サンプル）",
-      unknown:"情報なし"
-    };
+const labels = {
+  normal: "平常",
+  delay: "遅延",
+  suspended: "運転見合わせ",
+  unknown: "運行情報未接続"
+};
 
-    const routesEl = document.getElementById("routes");
-    const detailEl = document.getElementById("routeDetail");
+const routesEl = document.getElementById("routes");
+const detailEl = document.getElementById("routeDetail");
 
-    function showDetail(route) {
-      document.getElementById("detailName").textContent = route.name;
-      document.getElementById("detailCompany").textContent = "鉄道会社：" + route.company;
-      document.getElementById("detailArea").textContent = "地域：" + route.area;
-      document.getElementById("detailStatus").textContent = labels[route.status] || labels.unknown;
-      document.getElementById("detailText").textContent =
-        route.detail + "。これはサンプル情報で、実際の運行状況ではありません。";
-      detailEl.hidden = false;
-      detailEl.scrollIntoView({behavior:"smooth", block:"nearest"});
+async function loadRoutes() {
+  loadingRoutes = true;
+  document.getElementById("updated").textContent =
+    "全国の路線データを取得中...";
+  render();
+
+  try {
+    const response = await fetch("https://train.teraren.com/lines.json");
+    if (!response.ok) throw new Error("データ取得に失敗しました");
+
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error("データ形式が想定と異なります");
     }
 
-    function render() {
-      const q = document.getElementById("search").value.trim().toLowerCase();
-      const f = document.getElementById("filter").value;
+    sampleRoutes = data.map(line => ({
+      name: String(line.line_name || line.name || "名称不明"),
+      company: String(
+        line.company_name ||
+        line.operator_name ||
+        line.company ||
+        line.operator ||
+        "会社情報なし"
+      ),
+      area: String(line.area || line.prefecture || "地域情報なし"),
+      status: "unknown",
+      detail: "実際の運行情報はまだ接続されていません。"
+    })).filter(line => line.name !== "名称不明");
 
-      const list = sampleRoutes.filter(r =>
-        (f === "all" || r.status === f) &&
-        (r.name + r.company + r.area).toLowerCase().includes(q)
-      );
-
-      routesEl.replaceChildren();
-
-      if (list.length) {
-        list.forEach(route => {
-          const button = document.createElement("button");
-          button.className = "route-button";
-          button.type = "button";
-
-          const title = document.createElement("h3");
-          title.textContent = route.name;
-
-          const company = document.createElement("div");
-          company.textContent = route.company + " ・ " + route.area;
-
-          const status = document.createElement("p");
-          status.className = "status";
-          status.textContent = labels[route.status] || labels.unknown;
-
-          const hint = document.createElement("div");
-          hint.className = "muted";
-          hint.textContent = "タップして詳細を見る";
-
-          button.append(title, company, status, hint);
-          button.addEventListener("click", () => showDetail(route));
-          routesEl.appendChild(button);
-        });
-      } else {
-        const message = document.createElement("p");
-        message.textContent = "該当する路線がありません。";
-        routesEl.appendChild(message);
-      }
-
-      document.getElementById("count").textContent = list.length + "路線";
-      document.getElementById("normal").textContent =
-        sampleRoutes.filter(r => r.status === "normal").length;
-      document.getElementById("delay").textContent =
-        sampleRoutes.filter(r => r.status === "delay").length;
-      document.getElementById("suspended").textContent =
-        sampleRoutes.filter(r => r.status === "suspended").length;
-    }
-
-    document.getElementById("search").addEventListener("input", render);
-    document.getElementById("filter").addEventListener("change", render);
-
-    document.getElementById("refresh").addEventListener("click", () => {
-      document.getElementById("updated").textContent =
-        "表示を更新しました（サンプルデータ）";
-      detailEl.hidden = true;
-      render();
-    });
-
-    document.getElementById("closeDetail").addEventListener("click", () => {
-      detailEl.hidden = true;
-    });
-
+    document.getElementById("updated").textContent =
+      "路線データを取得しました。運行情報は未接続です。";
+  } catch (error) {
+    document.getElementById("updated").textContent =
+      "取得できませんでした。通信状況を確認して再試行してください。";
+    routesEl.replaceChildren();
+    const message = document.createElement("p");
+    message.textContent =
+      "路線データを読み込めませんでした。再取得ボタンを押してください。";
+    routesEl.appendChild(message);
+  } finally {
+    loadingRoutes = false;
     render();
-  </script>
-</body>
-</html>
+  }
+}
+
+function showDetail(route) {
+  document.getElementById("detailName").textContent = route.name;
+  document.getElementById("detailCompany").textContent =
+    "鉄道会社：" + route.company;
+  document.getElementById("detailArea").textContent =
+    "地域：" + route.area;
+  document.getElementById("detailStatus").textContent = labels.unknown;
+  document.getElementById("detailText").textContent = route.detail;
+
+  detailEl.hidden = false;
+  detailEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function render() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const f = document.getElementById("filter").value;
+
+  const list = sampleRoutes.filter(route =>
+    (f === "all" || f === "unknown") &&
+    (route.name + route.company + route.area).toLowerCase().includes(q)
+  );
+
+  routesEl.replaceChildren();
+
+  if (loadingRoutes) {
+    const message = document.createElement("p");
+    message.textContent = "路線データを読み込んでいます...";
+    routesEl.appendChild(message);
+  } else if (list.length) {
+    list.forEach(route => {
+      const button = document.createElement("button");
+      button.className = "route-button";
+      button.type = "button";
+
+      const title = document.createElement("h3");
+      title.textContent = route.name;
+
+      const company = document.createElement("div");
+      company.textContent = route.company + " ・ " + route.area;
+
+      const status = document.createElement("p");
+      status.className = "status";
+      status.textContent = labels.unknown;
+
+      const hint = document.createElement("div");
+      hint.className = "muted";
+      hint.textContent = "タップして詳細を見る";
+
+      button.append(title, company, status, hint);
+      button.addEventListener("click", () => showDetail(route));
+      routesEl.appendChild(button);
+    });
+  } else if (!loadingRoutes) {
+    const message = document.createElement("p");
+    message.textContent = "該当する路線がありません。";
+    routesEl.appendChild(message);
+  }
+
+  document.getElementById("count").textContent =
+    sampleRoutes.length + "路線";
+
+  document.getElementById("normal").textContent = "—";
+  document.getElementById("delay").textContent = "—";
+  document.getElementById("suspended").textContent = "—";
+}
+
+document.getElementById("search").addEventListener("input", render);
+document.getElementById("filter").addEventListener("change", render);
+
+document.getElementById("refresh").addEventListener("click", () => {
+  detailEl.hidden = true;
+  loadRoutes();
+});
+
+document.getElementById("closeDetail").addEventListener("click", () => {
+  detailEl.hidden = true;
+});
+
+document.querySelector(".stats").querySelectorAll(".stat span").forEach(
+  (element, index) => {
+    element.textContent = [
+      "平常（未接続）",
+      "遅延（未接続）",
+      "見合わせ（未接続）"
+    ][index];
+  }
+);
+
+loadRoutes();
+
 
